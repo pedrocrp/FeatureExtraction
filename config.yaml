@@ -1,0 +1,152 @@
+classification:
+  param_grids:
+    AdaBoost:
+      learning_rate:
+      - 0.01
+      - 0.1
+      - 1.0
+      n_estimators:
+      - 50
+      - 100
+    CatBoost:
+      depth:
+      - 4
+      iterations:
+      - 50
+      learning_rate:
+      - 0.1
+    Decision Tree:
+      criterion:
+      - gini
+      - entropy
+      max_depth:
+      - 5
+      - 10
+      - 20
+      min_samples_leaf:
+      - 1
+      - 2
+      - 4
+    K-Nearest Neighbors:
+      metric:
+      - euclidean
+      - manhattan
+      n_neighbors:
+      - 1
+      - 5
+      - 10
+      weights:
+      - uniform
+      - distance
+    LightGBM:
+      learning_rate:
+      - 0.01
+      - 0.1
+      max_depth:
+      - 5
+      - 10
+      - 20
+      min_child_samples:
+      - 5
+      - 10
+      min_split_gain:
+      - 0.0
+      - 0.1
+      n_estimators:
+      - 100
+      - 200
+    Logistic Regression:
+      C:
+      - 0.1
+      - 1
+      - 10
+      penalty:
+      - l1
+      - l2
+      solver:
+      - liblinear
+    MLP Classifier:
+      activation:
+      - relu
+      - tanh
+      hidden_layer_sizes:
+      - - 50
+      - - 100
+      solver:
+      - adam
+      - sgd
+    Naive Bayes: {}
+    QDA:
+      reg_param:
+      - 0.0
+      - 0.1
+      - 0.2
+    Random Forest:
+      max_features:
+      - sqrt
+      - log2
+      min_samples_split:
+      - 2
+      - 4
+      - 6
+      n_estimators:
+      - 10
+      - 20
+      - 50
+    SGD:
+      alpha:
+      - 0.0001
+      - 0.001
+      - 0.01
+      loss:
+      - squared_error
+      - modified_huber
+      - huber
+      - perceptron
+      - hinge
+      - log_loss
+      max_iter:
+      - 1000
+      - 2000
+      - 5000
+    SVM:
+      C:
+      - 0.1
+      - 1
+      - 10
+      gamma:
+      - scale
+      - auto
+      kernel:
+      - linear
+      - rbf
+    XGB:
+      learning_rate:
+      - 0.1
+      max_depth:
+      - 3
+      - 5
+      n_estimators:
+      - 50
+      - 100
+      subsample:
+      - 0.8
+      - 1.0
+  validation_size: 0.2
+dataset:
+  output_dir: /home/pedro/UnB/FeatureExtraction/datasets/COVID_Dataset_331_RGB_splitted
+  source_dir: /home/pedro/UnB/FeatureExtraction/datasets/COVID_Dataset_331_RGB
+  test_size: 0.2
+feature_extraction:
+  models:
+  - ResNet50
+  - VGG16
+  - VGG19
+  - EfficientNetV2L
+  - InceptionV3
+logging:
+  log_level: INFO
+paths:
+  log_file: /home/pedro/UnB/FeatureExtraction/datasets/COVID_Dataset_331_RGB_splitted/Logs/pipeline.log
+  test_folder: /home/pedro/UnB/FeatureExtraction/datasets/COVID_Dataset_331_RGB_splitted/Test
+  train_folder: /home/pedro/UnB/FeatureExtraction/datasets/COVID_Dataset_331_RGB_splitted/Train
