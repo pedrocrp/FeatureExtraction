@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_auc_score, matthews_corrcoef
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.model_selection import train_test_split, RandomizedSearchCV, cross_val_score
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
@@ -21,6 +21,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from lightgbm import LGBMClassifier
 import sys
+from sklearn.model_selection import StratifiedKFold
 
 class DirectoryManager:
     @staticmethod
@@ -33,19 +34,37 @@ class HyperparameterSearcher:
     @staticmethod
     def search(X_train, y_train, X_val, y_val, classifier, param_grid):
         logging.info(f"Buscando hiperparâmetros para {type(classifier).__name__}...")
-        grid_search = GridSearchCV(estimator=classifier, param_grid=param_grid, cv=3,
-                                   scoring='f1_weighted', n_jobs=6, error_score='raise')
-        grid_search.fit(X_train, y_train)
-        best_params = grid_search.best_params_
+        
+        # Utilizando StratifiedKFold com shuffle e random_state para garantir estratificação e reprodutibilidade
+        cv_strategy = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+        
+        # RandomizedSearchCV para busca aleatória de hiperparâmetros
+        random_search = RandomizedSearchCV(estimator=classifier, param_distributions=param_grid, 
+                                           n_iter=100, cv=cv_strategy, 
+                                           scoring='f1_weighted', n_jobs=6, 
+                                           error_score='raise', random_state=42, verbose=1)
+        
+        # Ajustando o modelo com o RandomizedSearchCV
+        random_search.fit(X_train, y_train)
+        
+        # Pegando os melhores parâmetros encontrados
+        best_params = random_search.best_params_
+        
+        # Ajustando o modelo final com os melhores parâmetros
         model = classifier.set_params(**best_params)
         model.fit(X_train, y_train)
+        
+        # Avaliando o modelo no conjunto de validação
         report = classification_report(y_val, model.predict(X_val), output_dict=True)
+        
+        # Extraindo as métricas de avaliação
         score_val = report["accuracy"]
         val_f1 = report["weighted avg"]["f1-score"]
         val_prec = report["weighted avg"]["precision"]
         val_rec = report["weighted avg"]["recall"]
 
-        del grid_search
+        # Libera memória
+        del random_search
         gc.collect()
 
         return best_params, score_val, val_f1, val_prec, val_rec
@@ -64,14 +83,18 @@ class ModelTrainer:
             start_time = time.time()
             self.y_test = y_test
 
+            # Realiza a busca de hiperparâmetros
             best_params, val_acc, val_f1, val_prec, val_rec = HyperparameterSearcher.search(X_train, y_train, X_val, y_val, classifier, param_grid)
             model = classifier.set_params(**best_params)
             model.fit(X_train, y_train)
 
+            # Predições para o conjunto de teste
             predictions_test = model.predict(X_test)
             test_report = classification_report(y_test, predictions_test, output_dict=True)
 
-            cv_scores = cross_val_score(model, X_train, y_train, cv=3, scoring='f1_weighted')
+            # Validação cruzada estratificada
+            cv = StratifiedKFold(n_splits=5)  # Usando 5 folds para maior robustez
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv, scoring='f1_weighted')
             mean_cv_score = cv_scores.mean()
 
             try:
@@ -82,6 +105,7 @@ class ModelTrainer:
             mcc = matthews_corrcoef(y_test, predictions_test)
             elapsed_time = time.time() - start_time
 
+            # Armazenamento dos resultados
             result = {
                 "Arquivo Feature": self.file_name,
                 "Classifier": name,

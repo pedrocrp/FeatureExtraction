@@ -17,7 +17,7 @@ from tensorflow.keras.applications.vgg19 import preprocess_input as preprocess_i
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input as preprocess_input_effnet
 from tensorflow.keras.applications.inception_v3 import preprocess_input as preprocess_input_inception
 from tensorflow.keras.models import Model
-
+import time  # Importando time para medir o tempo de execução
 
 class GPUManager:
     @staticmethod
@@ -77,6 +77,7 @@ class FeatureExtractor:
             raise ValueError("Unsupported model: " + self.model_name)
 
     def extract_with_labels(self, batch_size=32):
+        start_time = time.time()  # Inicia a contagem do tempo de extração
         features, labels = [], []
         self.class_directories = [d for d in os.listdir(self.test_dir) if os.path.isdir(os.path.join(self.test_dir, d))]
         self.class_labels = {class_dir: idx for idx, class_dir in enumerate(self.class_directories)}
@@ -110,10 +111,12 @@ class FeatureExtractor:
             features.extend(batch_features)
             labels.extend(batch_labels.numpy())
 
-        return features, labels
-
+        elapsed_time = time.time() - start_time  # Calcula o tempo total de extração
+        logging.info(f"Feature extraction completed for {self.model_name} in {elapsed_time:.2f} seconds.")
+        return features, labels, elapsed_time  # Retorna o tempo de execução também
+    
     def save_features_with_labels(self):
-        features, labels = self.extract_with_labels()
+        features, labels, elapsed_time = self.extract_with_labels()
         features = np.array(features)
         labels = np.array(labels)
 
@@ -137,6 +140,8 @@ class FeatureExtractor:
         logging.info(f"Features salvos em {output_features}, {output_labels}, {output_parquet} e {output_csv}")
         self._write_log()
 
+        return elapsed_time  # Retorna o tempo de execução para registro no CSV
+
     def _write_log(self):
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_filename = os.path.join(self.reports_dir, f"{self.model_name}_feature_extraction_log.txt")
@@ -158,9 +163,16 @@ class FeatureExtractionPipeline:
             self.config = yaml.safe_load(file)
 
     def run(self):
+        execution_times = []  # Lista para armazenar tempos de execução
+
         for model_name in self.config['feature_extraction']['models']:
             extractor = FeatureExtractor(model_name, self.config)
-            extractor.save_features_with_labels()
+            elapsed_time = extractor.save_features_with_labels()
+            execution_times.append({'Model': model_name, 'Time (seconds)': elapsed_time})  # Adiciona tempo à lista
+
+        # Salva os tempos de execução em um arquivo CSV
+        df_times = pd.DataFrame(execution_times)
+        df_times.to_csv(os.path.join(self.config['dataset']['output_dir'], 'execution_times.csv'), index=False)
 
 
 if __name__ == "__main__":

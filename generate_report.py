@@ -29,6 +29,10 @@ class ReportGenerator:
             return
 
         final_df = pd.concat(all_results, ignore_index=True)
+
+        # Filtra para remover o algoritmo QDA
+        final_df = final_df[final_df["Classifier"] != "QDA"]
+
         ranking = final_df.sort_values(by="Val_F1", ascending=False)
 
         # Salvar consolidado
